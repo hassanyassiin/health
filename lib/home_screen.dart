@@ -52,6 +52,7 @@ class _Home_ScreenState extends State<Home_Screen> {
       hasPermissions = false;
 
       bool authorized = false;
+
       if (!hasPermissions) {
         // requesting access to the data types before reading them
         try {
@@ -66,7 +67,6 @@ class _Home_ScreenState extends State<Home_Screen> {
           debugPrint("Exception in authorize: $error");
         }
       }
-
       if (!authorized) {
         Show_Text_Toast(
           context: context,
@@ -91,7 +91,7 @@ class _Home_ScreenState extends State<Home_Screen> {
         children: <Widget>[
           AspectRatio(
             aspectRatio: 0.46,
-            child: Image.asset('assets/photos/tre.png'),
+            child: Image.asset('assets/photos/logo.jpeg'),
           ),
           Padding(
             padding: EdgeInsets.only(bottom: 15.h, left: 2.w),

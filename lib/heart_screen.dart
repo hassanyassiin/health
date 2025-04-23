@@ -211,6 +211,7 @@ class HealthAppState extends State<HealthApp> {
 
     super.initState();
 
+    // addData();
     fetchData();
   }
 
@@ -351,14 +352,36 @@ class HealthAppState extends State<HealthApp> {
 
     final midnight = DateTime(now.year, now.month, now.day);
 
-    var steps =
-        await health.getTotalStepsInInterval(
-          midnight,
-          now,
-          includeManualEntry:
-              !recordingMethodsToFilter.contains(RecordingMethod.manual),
-        ) ??
-        0;
+    // var steps =
+    //     await health.getTotalStepsInInterval(
+    //       midnight,
+    //       now,
+    //       includeManualEntry:
+    //           !recordingMethodsToFilter.contains(RecordingMethod.manual),
+    //     ) ??
+    //     0;
+
+    int? steps;
+
+    // get steps for today (i.e., since midnight)
+    final nowww = DateTime.now();
+    final midnighttt = DateTime(nowww.year, nowww.month, nowww.day);
+
+    bool stepsPermission =
+        await health.hasPermissions([HealthDataType.STEPS]) ?? false;
+
+    if (!stepsPermission) {
+      stepsPermission = await health.requestAuthorization([
+        HealthDataType.STEPS,
+      ]);
+    }
+
+    steps = await health.getTotalStepsInInterval(
+      midnight,
+      now,
+      includeManualEntry:
+          !recordingMethodsToFilter.contains(RecordingMethod.manual),
+    );
 
     var sleep_index = _healthDataList.indexWhere(
       (e) => e.type == HealthDataType.SLEEP_ASLEEP,
@@ -382,9 +405,7 @@ class HealthAppState extends State<HealthApp> {
 
     if (boold_oxygen_index != -1) {
       blood_oxygen =
-          int.tryParse(
-            _healthDataList[sleep_index].value.toString().split(' ').last,
-          ) ??
+          int.tryParse(_healthDataList[boold_oxygen_index].value.toString()) ??
           98;
     }
 
@@ -397,7 +418,7 @@ class HealthAppState extends State<HealthApp> {
     if (hrv_index != -1) {
       hrv =
           int.tryParse(
-            _healthDataList[sleep_index].value.toString().split(' ').last,
+            _healthDataList[hrv_index].value.toString().split(' ').last,
           ) ??
           30;
     }
@@ -411,7 +432,10 @@ class HealthAppState extends State<HealthApp> {
     if (blood_pressure_index != -1) {
       blood_pressure =
           int.tryParse(
-            _healthDataList[sleep_index].value.toString().split(' ').last,
+            _healthDataList[blood_pressure_index].value
+                .toString()
+                .split(' ')
+                .last,
           ) ??
           8;
     }
@@ -424,22 +448,22 @@ class HealthAppState extends State<HealthApp> {
 
     if (hear_rate_index != -1) {
       heart_rate =
-          int.tryParse(
-            _healthDataList[sleep_index].value.toString().split(' ').last,
-          ) ??
-          70;
+          double.parse(
+            _healthDataList[hear_rate_index].value.toString().split(' ').last,
+          ).toInt();
     }
 
     global_sleep = sleep;
     global_blood_oxygen = blood_oxygen;
     global_blood_pressure = blood_pressure;
     global_heart_rate = heart_rate;
-    global_steps = steps;
+    global_steps = steps ?? 0;
     global_hrv = hrv;
 
     List<Map<String, dynamic>> notes = [];
 
     List<String> texts = [];
+    List<String> what_to_take = [];
 
     var sleep_to_hours = global_sleep / 60;
 
@@ -449,27 +473,32 @@ class HealthAppState extends State<HealthApp> {
         'text': 'You didn\'t rest enough, need a push',
       });
       texts.add('You didn\'t rest enough, need a push');
+      what_to_take.add('Use Energy Boost Oil');
     }
 
     if (global_steps < 5000) {
       notes.add({'key': 'Steps', 'text': 'Mentally foggy, sedentary day'});
       texts.add('Mentally foggy, sedentary day');
+      what_to_take.add('Focus Oil');
     } else if (global_steps < 3000) {
       notes.add({
         'key': 'Steps',
         'text': 'Inactivity + sluggishness = energy needed',
       });
       texts.add('Inactivity + sluggishness = energy needed');
+      what_to_take.add('Use Energy Boost Oil');
     }
 
     if (global_blood_oxygen < 94) {
       notes.add({'key': 'Oxygen', 'text': 'Low oxygen may cause fatigue'});
       texts.add('Low oxygen may cause fatigue');
+      what_to_take.add('Use Energy Boost Oil');
     }
 
     if (global_hrv < 20) {
       notes.add({'key': 'Hrv', 'text': 'Poor recovery - you feel drained'});
       texts.add('Poor recovery - you feel drained');
+      what_to_take.add('Use Energy Boost Oil');
     }
 
     if (global_hrv < 20 && global_blood_oxygen < 94) {
@@ -478,6 +507,7 @@ class HealthAppState extends State<HealthApp> {
         'text': 'Low recovery & oxygen - support needed',
       });
       texts.add('Low recovery & oxygen - support needed');
+      what_to_take.add('Use Energy Boost Oil');
     }
 
     if (global_heart_rate > 95) {
@@ -486,11 +516,13 @@ class HealthAppState extends State<HealthApp> {
         'text': 'High HR usually = stress or overexertion',
       });
       texts.add('High HR usually = stress or overexertion');
+      what_to_take.add('Stress & Fatigue Relief Oil');
     }
 
     if (global_blood_pressure > 1.52) {
       notes.add({'key': 'Blood', 'text': 'Tension and anxiety likely present'});
       texts.add('Tension and anxiety likely present');
+      what_to_take.add('Stress & Fatigue Relief Oil');
     }
 
     if (global_blood_pressure > 1.52 && global_hrv < 20) {
@@ -499,6 +531,7 @@ class HealthAppState extends State<HealthApp> {
         'text': 'Stress state - nervous system overwhelmed',
       });
       texts.add('Stress state - nervous system overwhelmed');
+      what_to_take.add('Stress & Fatigue Relief Oil');
     }
 
     if (global_heart_rate > 95 && global_hrv < 20) {
@@ -507,6 +540,7 @@ class HealthAppState extends State<HealthApp> {
         'text': 'Sympathetic overdrive = relaxation needed',
       });
       texts.add('Sympathetic overdrive = relaxation needed');
+      what_to_take.add('Stress & Fatigue Relief Oil');
     }
 
     if (sleep_to_hours > 6 &&
@@ -516,17 +550,20 @@ class HealthAppState extends State<HealthApp> {
         'text': 'Mental stress even after rest',
       });
       texts.add('Mental stress even after rest');
+      what_to_take.add('Stress & Fatigue Relief Oil');
     }
 
     if (sleep_to_hours > 6.5) {
       notes.add({'key': 'Sleep', 'text': 'You are well-rested physically'});
       texts.add('You are well-rested physically');
+      what_to_take.add('Focus Oil');
     }
 
     if (global_heart_rate < 95 && global_heart_rate > 70) {
       if (global_blood_pressure < 1.52) {
         notes.add({'key': 'Heart & Blood', 'text': 'You are calm physically'});
         texts.add('You are calm physically');
+        what_to_take.add('Focus Oil');
       }
     }
 
@@ -536,16 +573,32 @@ class HealthAppState extends State<HealthApp> {
         'text': 'Brain has oxygen - just needs clarity',
       });
       texts.add('Brain has oxygen - just needs clarity');
+      what_to_take.add('Focus Oil');
     }
+
+    setState(() {});
 
     // Delay showing the snackbar until after the build is complete
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await Future.delayed(Duration(seconds: 2));
 
+      Map<String, int> frequencyMap = {};
+
+      for (var item in what_to_take) {
+        frequencyMap[item] = (frequencyMap[item] ?? 0) + 1;
+      }
+
+      // Filter for items that appear more than once and get unique values
+      List<String> repeatedItems =
+          frequencyMap.entries
+              .where((entry) => entry.value > 1)
+              .map((entry) => entry.key)
+              .toList();
+
       Show_Options_List_Tiles_Modal_Sheet(
         title: 'Report',
         context: context,
-        texts: texts,
+        texts: repeatedItems,
       );
     });
   }
